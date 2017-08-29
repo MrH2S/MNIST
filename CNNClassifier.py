@@ -14,8 +14,8 @@ import csv
 
 
 #kaggle.com
-TRAINING_FILE='train.csv'
-TEST_FILE='test.csv'
+TRAINING_FILE='../input/train.csv'
+TEST_FILE='../input/test.csv'
 
 #count of traing data
 NUM_TRAINING = 42000
@@ -143,9 +143,9 @@ def train():
                                                          shuffle=True
                                                          )   
     
-    CNNClassifier= tf.estimator.Estimator(model_fn=fn_construct_model,model_dir=r'.\tmp\model')
+    CNNClassifier= tf.estimator.Estimator(model_fn=fn_construct_model,model_dir=r'./tmp/model')
 
-    CNNClassifier.train(train_input_fn,steps=20000)
+    CNNClassifier.train(train_input_fn,steps=10000)
 
 
 #predict 
@@ -154,19 +154,19 @@ def predict():
     test_set = load_test_data(TEST_FILE)
     test_set['images'] = np.asarray(test_set['images'],dtype=np.float32)/255
     
-    CNNClassifier= tf.estimator.Estimator(model_fn=fn_construct_model,model_dir=r'.\tmp\model')
+    CNNClassifier= tf.estimator.Estimator(model_fn=fn_construct_model,model_dir=r'./tmp/model')
 
-    test_input_fn = tf.estimator.inputs.numpy_input_fn({'x':test_set['images']})
+    test_input_fn = tf.estimator.inputs.numpy_input_fn({'x':test_set['images']},shuffle=False)
     
     predictions = CNNClassifier.predict(test_input_fn)
         
-    with open(r'.\predictions.csv','w') as f:
+    with open(r'./tmp/predictions.csv','w') as f:
         f.write('ImageId,Label\n')
         for i,v in enumerate(predictions):
             f.write(str(i+1)+','+str(v['classes'])+'\n')
 
-def main():
-    train()
+def main(unused_argv):
+     predict()
    
 if __name__ == '__main__':
     tf.app.run()
