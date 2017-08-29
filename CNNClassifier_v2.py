@@ -117,17 +117,14 @@ def fn_construct_model(features,labels,mode):
     #training op
     if mode == tf.estimator.ModeKeys.TRAIN:
         #add learning rate decay
-        learning_rate = tf.train.exponential_decay(0.0001, tf.train.get_global_step(),1000, 0.16)
+        learning_rate = tf.train.exponential_decay(0.0001, tf.train.get_global_step(),1000, 0.01)
         optimizer = tf.train.AdamOptimizer(learning_rate)
         op_train = optimizer.minimize(loss,global_step=tf.train.get_global_step())
         return tf.estimator.EstimatorSpec(mode=mode,loss=loss,train_op=op_train)
     
     #eval op
     if mode == tf.estimator.ModeKeys.EVAL:
-        eval_metric_ops = {
-                'accuracy':tf.metrics.accuracy(labels,predictions['classes'])
-                }
-        return tf.estimator.EstimatorSpec(mode=mode,loss=loss,eval_metric_ops=eval_metric_ops)
+        return tf.estimator.EstimatorSpec(mode=mode,loss=loss)
  
 #train
 def train():

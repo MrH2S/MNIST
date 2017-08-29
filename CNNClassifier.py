@@ -82,16 +82,16 @@ def fn_construct_model(features,labels,mode):
     #data I/O PORT
     images = tf.reshape(features['x'],(-1,IMG_SIZE,IMG_SIZE,COLOR_CHANNEL))
     #conv1
-    conv1 = tf.layers.conv2d(images,32,[5,5],padding='same',activation=tf.nn.relu)
+    conv1 = tf.layers.conv2d(images,32,[3,3],padding='same',activation=tf.nn.relu)
     
     #ouput [batch,14,14,32]
-    pool1 = tf.layers.max_pooling2d(conv1,(2,2),2)
+    pool1 = tf.layers.max_pooling2d(conv1,(2,2),2,'same')
     
     #conv2
-    conv2 = tf.layers.conv2d(pool1,64,[5,5],padding='same',activation=tf.nn.relu)
+    conv2 = tf.layers.conv2d(pool1,64,[3,3],padding='same',activation=tf.nn.relu)
     
     #output [batch,7,7,64]
-    pool2 = tf.layers.max_pooling2d(conv2,(2,2),2)
+    pool2 = tf.layers.max_pooling2d(conv2,(2,2),2,'same')
     
     flat = tf.reshape(pool2,[-1,7*7*64])
     
@@ -115,21 +115,19 @@ def fn_construct_model(features,labels,mode):
     loss = tf.losses.softmax_cross_entropy(labels,logits)
     
     if mode == tf.estimator.ModeKeys.TRAIN:
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
+        learning_rate = tf.train.exponential_decay(0.0001, tf.train.get_global_step(),1000, 0.0001)
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
         op_train = optimizer.minimize(loss,global_step=tf.train.get_global_step())
         return tf.estimator.EstimatorSpec(mode=mode,loss=loss,train_op=op_train)
     
     if mode == tf.estimator.ModeKeys.EVAL:
-        eval_metric_op = {
-                'accuracy':tf.metrics.accuracy(labels,predictions['classes'])
-                }
-        return tf.estimator.EstimatorSpec(mode=mode,loss=loss,eval_metric_op=eval_metric_op)
+        return tf.estimator.EstimatorSpec(mode=mode,loss=loss)
  
 #train
-'''
-def main(unused_argv):
+
+def train():
     train_set = load_training_data(TRAINING_FILE)
-    train_set['images'] = np.asarray(train_set['images'],dtype=np.float32)
+    train_set['images'] = np.asarray(train_set['images'],dtype=np.float32)/255
     train_set['labels'] = np.asarray(train_set['labels'],dtype=np.int32)
     
     
@@ -147,30 +145,28 @@ def main(unused_argv):
     
     CNNClassifier= tf.estimator.Estimator(model_fn=fn_construct_model,model_dir=r'.\tmp\model')
 
-    CNNClassifier.train(train_input_fn,steps=10000)
-'''
+    CNNClassifier.train(train_input_fn,steps=20000)
+
 
 #predict 
 
-def main(unused_argv):
+def predict():
     test_set = load_test_data(TEST_FILE)
-    test_set['images'] = np.asarray(test_set['images'],dtype=np.float32)
+    test_set['images'] = np.asarray(test_set['images'],dtype=np.float32)/255
     
     CNNClassifier= tf.estimator.Estimator(model_fn=fn_construct_model,model_dir=r'.\tmp\model')
 
-    test_input_fn = tf.estimator.inputs.numpy_input_fn({'x':test_set['images']},
-                                                         num_epochs=1,
-                                                         shuffle=False
-                                                         )
+    test_input_fn = tf.estimator.inputs.numpy_input_fn({'x':test_set['images']})
     
     predictions = CNNClassifier.predict(test_input_fn)
         
-    
     with open(r'.\predictions.csv','w') as f:
         f.write('ImageId,Label\n')
         for i,v in enumerate(predictions):
             f.write(str(i+1)+','+str(v['classes'])+'\n')
 
+def main():
+    train()
    
 if __name__ == '__main__':
     tf.app.run()
